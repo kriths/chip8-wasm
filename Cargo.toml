@@ -1,0 +1,7 @@
+[package]
+name = "chip8-wasm"
+version = "0.1.0"
+authors = ["Thomas Krisch"]
+edition = "2018"
+
+[dependencies]
