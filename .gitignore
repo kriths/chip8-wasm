@@ -5,3 +5,6 @@
 # Rust stuff
 /target
 Cargo.lock
+
+# Build outputs
+pkg/
