@@ -4,21 +4,31 @@ use std::io;
 
 const TOTAL_MEMORY: usize = 4096;
 const PROGRAM_OFFSET: usize = 0x200;
+const REGISTER_COUNT: usize = 16;
+const STACK_SIZE: usize = 16;
 
 #[derive(Debug)]
 pub struct Emulator {
-    ip: usize,
+    // Instruction pointer
+    ip: u16,
+
+    // Stack pointer
+    sp: u8,
+    stack: [u16; STACK_SIZE],
+
     memory: [u8; TOTAL_MEMORY],
-    registers: [u8; 16],
+    registers: [u8; REGISTER_COUNT],
     addr_reg: u16,
 }
 
 impl Emulator {
     pub fn init() -> Self {
         Emulator {
-            ip: 0x200,  // Programs start at address 0x200
+            ip: PROGRAM_OFFSET as u16,
+            sp: 0x00,
+            stack: [0; STACK_SIZE],
             memory: [0; TOTAL_MEMORY],
-            registers: [0; 16],
+            registers: [0; REGISTER_COUNT],
             addr_reg: 0x0000,
         }
     }
@@ -37,17 +47,25 @@ impl Emulator {
     }
 
     fn iterate(&mut self) {
-        let instr = u16::from_be_bytes([self.memory[self.ip], self.memory[self.ip + 1]]);
-        println!("Running instruction: {:#06x}", instr);
+        let instr = u16::from_be_bytes([self.memory[self.ip as usize], self.memory[(self.ip + 1) as usize]]);
+        println!("Running instruction: {:#06x} @ IP: {:#06x}", instr, self.ip);
 
         // Increment IP before jumps
         self.ip += 2;
 
-        if instr >> 12 == 0x0A {
-            // 0xAnnn - LD I, addr
-            self.addr_reg = instr & 0x0FFF;
-        } else {
-            panic!("Invalid instruction")
+        // The instruction's first nibble indicates the type of operation. Some have multiple
+        // different instructions. For those we'll switch later.
+        let class: u8 = (instr >> 12) as u8;
+        match class {
+            0x02 => { // 0x2nnn - CALL addr
+                self.stack[self.sp as usize] = self.ip;
+                self.sp += 1;
+                self.ip = instr & 0x0FFF;
+            }
+            0x0A => { // 0xAnnn - LD I, addr
+                self.addr_reg = instr & 0x0FFF;
+            }
+            _ => panic!("Invalid instruction")
         }
     }
 
