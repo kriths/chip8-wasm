@@ -1,28 +1,29 @@
 use std::fs::File;
 use std::io::prelude::*;
-
-use wasm_bindgen::__rt::std::io::Error;
+use std::io;
 
 const TOTAL_MEMORY: usize = 4096;
 const PROGRAM_OFFSET: usize = 0x200;
 
 #[derive(Debug)]
-struct CPU {
+pub struct Emulator {
     ip: usize,
     memory: [u8; TOTAL_MEMORY],
     registers: [u8; 16],
+    addr_reg: u16,
 }
 
-impl CPU {
-    fn init() -> Self {
-        CPU {
+impl Emulator {
+    pub fn init() -> Self {
+        Emulator {
             ip: 0x200,  // Programs start at address 0x200
             memory: [0; TOTAL_MEMORY],
-            registers: [0; 16]
+            registers: [0; 16],
+            addr_reg: 0x0000,
         }
     }
 
-    fn load_from_file(&mut self, name: String) -> Result<(), Error> {
+    pub fn load_from_file(&mut self, name: String) -> Result<(), io::Error> {
         const BUFFER_SIZE: usize = TOTAL_MEMORY - PROGRAM_OFFSET;
         let mut buffer = [0; BUFFER_SIZE];
         let mut file = File::open(name)?;
@@ -36,17 +37,23 @@ impl CPU {
     }
 
     fn iterate(&mut self) {
-        let instr = self.memory[self.ip];
-        println!("{}", instr);
+        let instr = u16::from_be_bytes([self.memory[self.ip], self.memory[self.ip + 1]]);
+        println!("Running instruction: {:#06x}", instr);
+
+        // Increment IP before jumps
+        self.ip += 2;
+
+        if instr >> 12 == 0x0A {
+            // 0xAnnn - LD I, addr
+            self.addr_reg = instr & 0x0FFF;
+        } else {
+            panic!("Invalid instruction")
+        }
     }
-}
 
-#[test]
-fn main() -> Result<(), Error> {
-    let mut C: CPU = CPU::init();
-
-    C.load_from_file(String::from("games/TETRIS"))?;
-    C.iterate();
-
-    Ok(())
+    pub fn run(&mut self) {
+        loop {
+            self.iterate();
+        }
+    }
 }
