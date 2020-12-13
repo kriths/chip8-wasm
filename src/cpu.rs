@@ -143,7 +143,7 @@ impl CPU {
                         self.registers[0xF as usize] = !ovl as u8;
                         res
                     }
-                    0x8 => { // 0x8xyE - SHL Vx {, Vy}
+                    0xE => { // 0x8xyE - SHL Vx {, Vy}
                         self.registers[0xF as usize] = vx >> 7;
                         vx << 1
                     }
@@ -175,5 +175,256 @@ impl CPU {
         loop {
             self.iterate();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn instr_ret() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x1234;
+        cpu.stack[0] = 0x1111;
+        cpu.stack[1] = 0x2222;
+        cpu.stack[2] = 0x3333;
+        cpu.sp = 1;
+
+        cpu.run_instr(0x00EE);
+
+        assert_eq!(0, cpu.sp);
+        assert_eq!(0x2222, cpu.ip);
+    }
+
+    #[test]
+    fn instr_jmp_imm() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x1234;
+        cpu.sp = 1;
+
+        cpu.run_instr(0x1456);
+
+        assert_eq!(1, cpu.sp);
+        assert_eq!(0x0456, cpu.ip);
+    }
+
+    #[test]
+    fn instr_call() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x1234;
+        cpu.stack[0] = 0x1111;
+        cpu.stack[1] = 0x2222;
+        cpu.stack[2] = 0x3333;
+        cpu.sp = 0;
+
+        cpu.run_instr(0x2456);
+
+        assert_eq!(1, cpu.sp);
+        assert_eq!(0x0456, cpu.ip);
+        assert_eq!(0x1111, cpu.stack[0]);
+        assert_eq!(0x1234 + 2, cpu.stack[1]);
+        assert_eq!(0x3333, cpu.stack[2]);
+    }
+
+    #[test]
+    fn instr_se_imm() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x0100;
+        cpu.registers[1] = 0x12;
+
+        cpu.run_instr(0x3113);
+        assert_eq!(0x0102, cpu.ip);
+
+        cpu.run_instr(0x3112);
+        assert_eq!(0x0106, cpu.ip);
+    }
+
+    #[test]
+    fn instr_sne_imm() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x0100;
+        cpu.registers[1] = 0x12;
+
+        cpu.run_instr(0x4113);
+        assert_eq!(0x0104, cpu.ip);
+
+        cpu.run_instr(0x4112);
+        assert_eq!(0x0106, cpu.ip);
+    }
+
+    #[test]
+    fn instr_se_reg() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x0100;
+        cpu.registers[1] = 0x12;
+        cpu.registers[2] = 0x12;
+        cpu.registers[3] = 0x13;
+
+        cpu.run_instr(0x5130);
+        assert_eq!(0x0102, cpu.ip);
+
+        cpu.run_instr(0x5120);
+        assert_eq!(0x0106, cpu.ip);
+    }
+
+    #[test]
+    fn instr_ld_imm() {
+        let mut cpu = CPU::init();
+        cpu.run_instr(0x6123);
+        assert_eq!(0x23, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_add_imm() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0x11;
+        cpu.run_instr(0x7122);
+        assert_eq!(0x33, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_ld_reg() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0x11;
+        cpu.registers[2] = 0x22;
+        cpu.run_instr(0x8120);
+        assert_eq!(0x22, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_or() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0b00110011;
+        cpu.registers[2] = 0b00001111;
+        cpu.run_instr(0x8121);
+        assert_eq!(0b00111111, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_and() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0b00110011;
+        cpu.registers[2] = 0b00001111;
+        cpu.run_instr(0x8122);
+        assert_eq!(0b00000011, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_xor() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0b00110011;
+        cpu.registers[2] = 0b00001111;
+        cpu.run_instr(0x8123);
+        assert_eq!(0b00111100, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_add() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 250;
+        cpu.registers[2] = 5;
+
+        cpu.run_instr(0x8124);
+        assert_eq!(255, cpu.registers[1]);
+        assert_eq!(0, cpu.registers[0xF]);
+
+        cpu.run_instr(0x8124);
+        assert_eq!(4, cpu.registers[1]);
+        assert_eq!(1, cpu.registers[0xF]);
+    }
+
+    #[test]
+    fn instr_sub() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 7;
+        cpu.registers[2] = 5;
+
+        cpu.run_instr(0x8125);
+        assert_eq!(2, cpu.registers[1]);
+        assert_eq!(1, cpu.registers[0xF]);
+
+        cpu.run_instr(0x8125);
+        assert_eq!(253, cpu.registers[1]);
+        assert_eq!(0, cpu.registers[0xF]);
+    }
+
+    #[test]
+    fn instr_shr() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0b01011010;
+
+        cpu.run_instr(0x8106);
+        assert_eq!(0b00101101, cpu.registers[1]);
+        assert_eq!(0, cpu.registers[0xF]);
+
+        cpu.run_instr(0x8106);
+        assert_eq!(0b00010110, cpu.registers[1]);
+        assert_eq!(1, cpu.registers[0xF]);
+    }
+
+    #[test]
+    fn instr_sub_i() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 5;
+        cpu.registers[2] = 7;
+
+        cpu.run_instr(0x8127);
+        assert_eq!(2, cpu.registers[1]);
+        assert_eq!(1, cpu.registers[0xF]);
+
+        cpu.registers[2] = 1;
+        cpu.run_instr(0x8127);
+        assert_eq!(255, cpu.registers[1]);
+        assert_eq!(0, cpu.registers[0xF]);
+    }
+
+    #[test]
+    fn instr_shl() {
+        let mut cpu = CPU::init();
+        cpu.registers[1] = 0b01011010;
+
+        cpu.run_instr(0x810E);
+        assert_eq!(0b10110100, cpu.registers[1]);
+        assert_eq!(0, cpu.registers[0xF]);
+
+        cpu.run_instr(0x810E);
+        assert_eq!(0b01101000, cpu.registers[1]);
+        assert_eq!(1, cpu.registers[0xF]);
+    }
+
+    #[test]
+    fn instr_sne_reg() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x0100;
+        cpu.registers[1] = 0x12;
+        cpu.registers[2] = 0x12;
+        cpu.registers[3] = 0x13;
+
+        cpu.run_instr(0x9130);
+        assert_eq!(0x0104, cpu.ip);
+
+        cpu.run_instr(0x9120);
+        assert_eq!(0x0106, cpu.ip);
+    }
+
+    #[test]
+    fn instr_ld_addr() {
+        let mut cpu = CPU::init();
+        cpu.run_instr(0xA123);
+        assert_eq!(0x0123, cpu.addr_reg);
+    }
+
+    #[test]
+    fn instr_jmp_reg() {
+        let mut cpu = CPU::init();
+        cpu.ip = 0x1234;
+        cpu.sp = 1;
+        cpu.registers[0] = 0x22;
+
+        cpu.run_instr(0xB111);
+
+        assert_eq!(1, cpu.sp);
+        assert_eq!(0x0133, cpu.ip);
     }
 }
