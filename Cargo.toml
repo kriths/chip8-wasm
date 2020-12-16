@@ -8,4 +8,5 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
+rand = "0.7"
 wasm-bindgen = "0.2"

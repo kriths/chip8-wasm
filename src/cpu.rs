@@ -1,13 +1,14 @@
 use std::fs::File;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
+
+use rand::prelude::*;
 
 const TOTAL_MEMORY: usize = 4096;
 const PROGRAM_OFFSET: usize = 0x200;
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 
-#[derive(Debug)]
 pub struct CPU {
     // Instruction pointer
     ip: u16,
@@ -19,6 +20,8 @@ pub struct CPU {
     memory: [u8; TOTAL_MEMORY],
     registers: [u8; REGISTER_COUNT],
     addr_reg: u16,
+
+    rng: Box<dyn RngCore>,
 }
 
 impl CPU {
@@ -30,6 +33,7 @@ impl CPU {
             memory: [0; TOTAL_MEMORY],
             registers: [0; REGISTER_COUNT],
             addr_reg: 0x0000,
+            rng: Box::new(rand::thread_rng()),
         }
     }
 
@@ -166,6 +170,12 @@ impl CPU {
             }
             0xB => { // 0xBnnn - JP V0, addr
                 self.ip = (instr & 0x0FFF) + (self.registers[0x0] as u16);
+            }
+            0xC => { // 0xCxkk - RND Vx, byte
+                let register = (instr >> 8) & 0x0F;
+                let mask = instr as u8;
+                let rnd = self.rng.next_u32() as u8;
+                self.registers[register as usize] = rnd & mask;
             }
             _ => panic!("Invalid instruction")
         }
@@ -426,5 +436,13 @@ mod tests {
 
         assert_eq!(1, cpu.sp);
         assert_eq!(0x0133, cpu.ip);
+    }
+
+    #[test]
+    fn instr_rnd() {
+        let mut cpu = CPU::init();
+        cpu.rng = Box::new(rand::rngs::mock::StepRng::new(0b00111100, 0));
+        cpu.run_instr(0xC1F0);
+        assert_eq!(0b00110000, cpu.registers[1]);
     }
 }
