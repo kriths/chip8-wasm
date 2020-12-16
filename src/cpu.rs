@@ -72,10 +72,10 @@ impl CPU {
         let class: u8 = (instr >> 12) as u8;
         match class {
             0x0 => {
-                if instr == 0x00EE { // RET
+                if instr == 0x00EE { // 0x00EE - RET
                     self.ip = self.stack[self.sp as usize];
                     self.sp -= 1;
-                } else if instr == 0x00E0 { // CLS
+                } else if instr == 0x00E0 { // 0x00E0 - CLS
                     self.screen.clear();
                 } else {
                     panic!("Unimplemented call instruction")
@@ -182,7 +182,7 @@ impl CPU {
                 let rnd = self.rng.next_u32() as u8;
                 self.registers[register as usize] = rnd & mask;
             }
-            0xD => {
+            0xD => { // 0xDxyn - DRW Vx, Vy, nibble
                 let mut any_changes = false;
                 let x = ((instr >> 8) & 0x0F) as u8;
                 let y_start = ((instr >> 12) & 0x0F) as u8;
@@ -192,6 +192,15 @@ impl CPU {
                     any_changes |= self.screen.draw_sprite_line(x, y_start + i, line);
                 }
                 self.registers[0xF] = any_changes as u8;
+            }
+            0xF => {
+                match instr as u8 {
+                    0x1E => { // 0xFx1E - ADD I, Vx
+                        let register = (instr >> 8) & 0x0F;
+                        self.addr_reg += self.registers[register as usize] as u16;
+                    }
+                    _ => panic!("Invalid instruction F")
+                }
             }
             _ => panic!("Invalid instruction")
         }
