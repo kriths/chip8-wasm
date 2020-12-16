@@ -1,6 +1,7 @@
 use cpu::CPU;
 
 mod cpu;
+mod screen;
 
 fn main() {
     // TODO get file name dynamically

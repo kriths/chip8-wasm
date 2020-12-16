@@ -4,6 +4,8 @@ use std::io::prelude::*;
 
 use rand::prelude::*;
 
+use crate::screen::Screen;
+
 const TOTAL_MEMORY: usize = 4096;
 const PROGRAM_OFFSET: usize = 0x200;
 const REGISTER_COUNT: usize = 16;
@@ -22,6 +24,8 @@ pub struct CPU {
     addr_reg: u16,
 
     rng: Box<dyn RngCore>,
+
+    screen: Screen,
 }
 
 impl CPU {
@@ -34,6 +38,7 @@ impl CPU {
             registers: [0; REGISTER_COUNT],
             addr_reg: 0x0000,
             rng: Box::new(rand::thread_rng()),
+            screen: Screen::init(),
         }
     }
 
@@ -71,7 +76,7 @@ impl CPU {
                     self.ip = self.stack[self.sp as usize];
                     self.sp -= 1;
                 } else if instr == 0x00E0 { // CLS
-                    // TODO clear screen
+                    self.screen.clear();
                 } else {
                     panic!("Unimplemented call instruction")
                 }
@@ -176,6 +181,17 @@ impl CPU {
                 let mask = instr as u8;
                 let rnd = self.rng.next_u32() as u8;
                 self.registers[register as usize] = rnd & mask;
+            }
+            0xD => {
+                let mut any_changes = false;
+                let x = ((instr >> 8) & 0x0F) as u8;
+                let y_start = ((instr >> 12) & 0x0F) as u8;
+                let line_count = (instr & 0x0F) as u8;
+                for i in 0..=line_count {
+                    let line = self.memory[(self.addr_reg + i as u16) as usize];
+                    any_changes |= self.screen.draw_sprite_line(x, y_start + i, line);
+                }
+                self.registers[0xF] = any_changes as u8;
             }
             _ => panic!("Invalid instruction")
         }
