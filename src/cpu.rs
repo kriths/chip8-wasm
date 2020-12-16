@@ -120,8 +120,8 @@ impl CPU {
                 self.registers[register as usize] = value;
             }
             0x7 => { // 0x7xkk - ADD Vx, byte
-                let register = (instr >> 8) & 0x0F;
-                self.registers[register as usize] += instr as u8;
+                let register = ((instr >> 8) & 0x0F) as usize;
+                self.registers[register] = self.registers[register].wrapping_add(instr as u8);
             }
             0x8 => {
                 let register_x = (instr >> 8) & 0x0F;
