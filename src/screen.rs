@@ -36,10 +36,67 @@ impl Screen {
         let mut any_changes = false;
         let x_max = cmp::min(x_usize + 8, SCREEN_WIDTH);
         for i in 0..x_max-x_usize {
-            let state = (line >> (7 - x)) & 1 == 1;
-            any_changes |= self.set_pixel(i, y_usize, state);
+            let state = (line >> (7 - i)) & 1 == 1;
+            any_changes |= self.set_pixel(i + x_usize, y_usize, state);
         }
 
         any_changes
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clear() {
+        let mut screen = Screen::init();
+        screen.pixels[0] = true;
+        screen.pixels[100] = true;
+        screen.pixels[123] = true;
+        screen.pixels[screen.pixels.len() - 1] = true;
+
+        screen.clear();
+        for i in 0..screen.pixels.len() {
+            assert_eq!(false, screen.pixels[i]);
+        }
+    }
+
+    #[test]
+    fn set_pixel() {
+        let mut screen = Screen::init();
+        assert_eq!(false, screen.pixels[10]);
+
+        let mut changed = screen.set_pixel(10, 0, false);
+        assert_eq!(false, screen.pixels[10]);
+        assert_eq!(false, changed);
+
+        changed = screen.set_pixel(10, 0, true);
+        assert_eq!(true, screen.pixels[10]);
+        assert_eq!(true, changed);
+
+        changed = screen.set_pixel(10, 0, true);
+        assert_eq!(true, screen.pixels[10]);
+        assert_eq!(false, changed);
+    }
+
+    #[test]
+    fn draw_sprite_line() {
+        let line = 0b00111100;
+        let mut screen = Screen::init();
+        let mut changed = screen.draw_sprite_line(10, 0, line);
+
+        assert_eq!(false, screen.pixels[10]);
+        assert_eq!(false, screen.pixels[11]);
+        assert_eq!(true, screen.pixels[12]);
+        assert_eq!(true, screen.pixels[13]);
+        assert_eq!(true, screen.pixels[14]);
+        assert_eq!(true, screen.pixels[15]);
+        assert_eq!(false, screen.pixels[16]);
+        assert_eq!(false, screen.pixels[17]);
+        assert_eq!(true, changed);
+
+        changed = screen.draw_sprite_line(10, 0, line);
+        assert_eq!(false, changed);
     }
 }
