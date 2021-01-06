@@ -29,7 +29,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn init() -> Self {
+    pub fn new() -> Self {
         CPU {
             ip: PROGRAM_OFFSET as u16,
             sp: 0x00,
@@ -38,7 +38,7 @@ impl CPU {
             registers: [0; REGISTER_COUNT],
             addr_reg: 0x0000,
             rng: Box::new(rand::thread_rng()),
-            screen: Screen::init(),
+            screen: Screen::new(),
         }
     }
 
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn instr_ret() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x1234;
         cpu.stack[0] = 0x1111;
         cpu.stack[1] = 0x2222;
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn instr_jmp_imm() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x1234;
         cpu.sp = 1;
 
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn instr_call() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x1234;
         cpu.stack[0] = 0x1111;
         cpu.stack[1] = 0x2222;
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn instr_se_imm() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x0100;
         cpu.registers[1] = 0x12;
 
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn instr_sne_imm() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x0100;
         cpu.registers[1] = 0x12;
 
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn instr_se_reg() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x0100;
         cpu.registers[1] = 0x12;
         cpu.registers[2] = 0x12;
@@ -305,14 +305,14 @@ mod tests {
 
     #[test]
     fn instr_ld_imm() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.run_instr(0x6123);
         assert_eq!(0x23, cpu.registers[1]);
     }
 
     #[test]
     fn instr_add_imm() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0x11;
         cpu.run_instr(0x7122);
         assert_eq!(0x33, cpu.registers[1]);
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn instr_ld_reg() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0x11;
         cpu.registers[2] = 0x22;
         cpu.run_instr(0x8120);
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn instr_or() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0b00110011;
         cpu.registers[2] = 0b00001111;
         cpu.run_instr(0x8121);
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn instr_and() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0b00110011;
         cpu.registers[2] = 0b00001111;
         cpu.run_instr(0x8122);
@@ -347,7 +347,7 @@ mod tests {
 
     #[test]
     fn instr_xor() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0b00110011;
         cpu.registers[2] = 0b00001111;
         cpu.run_instr(0x8123);
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn instr_add() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 250;
         cpu.registers[2] = 5;
 
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn instr_sub() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 7;
         cpu.registers[2] = 5;
 
@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn instr_shr() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0b01011010;
 
         cpu.run_instr(0x8106);
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn instr_sub_i() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 5;
         cpu.registers[2] = 7;
 
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     fn instr_shl() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.registers[1] = 0b01011010;
 
         cpu.run_instr(0x810E);
@@ -430,7 +430,7 @@ mod tests {
 
     #[test]
     fn instr_sne_reg() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x0100;
         cpu.registers[1] = 0x12;
         cpu.registers[2] = 0x12;
@@ -445,14 +445,14 @@ mod tests {
 
     #[test]
     fn instr_ld_addr() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.run_instr(0xA123);
         assert_eq!(0x0123, cpu.addr_reg);
     }
 
     #[test]
     fn instr_jmp_reg() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.ip = 0x1234;
         cpu.sp = 1;
         cpu.registers[0] = 0x22;
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn instr_rnd() {
-        let mut cpu = CPU::init();
+        let mut cpu = CPU::new();
         cpu.rng = Box::new(rand::rngs::mock::StepRng::new(0b00111100, 0));
         cpu.run_instr(0xC1F0);
         assert_eq!(0b00110000, cpu.registers[1]);

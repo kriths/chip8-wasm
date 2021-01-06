@@ -10,7 +10,7 @@ pub struct Screen {
 }
 
 impl Screen {
-    pub fn init() -> Self {
+    pub fn new() -> Self {
         Screen {
             pixels: [false; SCREEN_PIXELS],
         }
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut screen = Screen::init();
+        let mut screen = Screen::new();
         screen.pixels[0] = true;
         screen.pixels[100] = true;
         screen.pixels[123] = true;
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn set_pixel() {
-        let mut screen = Screen::init();
+        let mut screen = Screen::new();
         assert_eq!(false, screen.pixels[10]);
 
         let mut changed = screen.set_pixel(10, 0, false);
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn draw_sprite_line() {
         let line = 0b00111100;
-        let mut screen = Screen::init();
+        let mut screen = Screen::new();
         let mut changed = screen.draw_sprite_line(10, 0, line);
 
         assert_eq!(false, screen.pixels[10]);
