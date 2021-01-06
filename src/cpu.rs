@@ -214,6 +214,22 @@ impl CPU {
                     0x1E => { // 0xFx1E - ADD I, Vx
                         self.addr_reg += self.registers[value as usize] as u16;
                     }
+                    0x33 => { // 0xFx33 - LD B, Vx
+                        let reg = self.registers[value as usize];
+                        self.memory[self.addr_reg as usize] = reg / 100;
+                        self.memory[(self.addr_reg + 1) as usize] = (reg / 10) % 10;
+                        self.memory[(self.addr_reg + 2) as usize] = reg % 10;
+                    }
+                    0x55 => { // 0xFx55 - LD [I], Vx
+                        for i in 0..=value {
+                            self.memory[(self.addr_reg + i as u16) as usize] = self.registers[i as usize];
+                        }
+                    }
+                    0x65 => { // 0xFx65 - LD Vx, [I]
+                        for i in 0..=value {
+                            self.registers[i as usize] = self.memory[(self.addr_reg + i as u16) as usize];
+                        }
+                    }
                     _ => panic!("Invalid instruction F")
                 }
             }
@@ -516,5 +532,44 @@ mod tests {
         cpu.registers[5] = 0x56;
         cpu.run_instr(0xF51E);
         assert_eq!(0x9877, cpu.addr_reg);
+    }
+
+    #[test]
+    fn instr_ld_bcd_vx() {
+        let mut cpu = CPU::new();
+        cpu.addr_reg = 0x0345;
+        cpu.registers[5] = 123;
+        cpu.run_instr(0xF533);
+        assert_eq!(1, cpu.memory[0x0345]);
+        assert_eq!(2, cpu.memory[0x0346]);
+        assert_eq!(3, cpu.memory[0x0347]);
+    }
+
+    #[test]
+    fn instr_ld_mem_vx() {
+        let mut cpu = CPU::new();
+        cpu.addr_reg = 0x0345;
+        cpu.registers[0] = 12;
+        cpu.registers[1] = 34;
+        cpu.registers[2] = 56;
+        cpu.run_instr(0xF255);
+        assert_eq!(12, cpu.memory[0x0345]);
+        assert_eq!(34, cpu.memory[0x0346]);
+        assert_eq!(56, cpu.memory[0x0347]);
+        assert_eq!(0, cpu.memory[0x0348]);
+    }
+
+    #[test]
+    fn instr_ld_vx_mem() {
+        let mut cpu = CPU::new();
+        cpu.addr_reg = 0x0345;
+        cpu.memory[0x0345] = 12;
+        cpu.memory[0x0346] = 34;
+        cpu.memory[0x0347] = 56;
+        cpu.run_instr(0xF265);
+        assert_eq!(12, cpu.registers[0]);
+        assert_eq!(34, cpu.registers[1]);
+        assert_eq!(56, cpu.registers[2]);
+        assert_eq!(0, cpu.registers[3]);
     }
 }
