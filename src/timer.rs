@@ -44,7 +44,7 @@ mod tests {
         let mut timer = Timer::new();
         assert_eq!(0, timer.get_timeout());
 
-        let max_timeout = u8::MAX & 0x0F;
+        let max_timeout = u8::MAX;
         timer.set_timeout(max_timeout);
         assert!(timer.get_timeout() > max_timeout - 2);
         assert!(timer.get_timeout() <= max_timeout);

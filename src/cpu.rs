@@ -203,13 +203,13 @@ impl CPU {
                 let value = ((instr >> 8) & 0x0F) as u8;
                 match instr as u8 {
                     0x07 => { // 0xFx07 - LD Vx, DT
-                        self.registers[value as usize];
+                        self.registers[value as usize] = self.delay_timer.get_timeout();
                     }
                     0x15 => { // 0xFx15 - LD DT, Vx
-                        self.delay_timer.set_timeout(value);
+                        self.delay_timer.set_timeout(self.registers[value as usize]);
                     }
                     0x18 => { // 0xFx18 - LD ST, Vx
-                        self.sound_timer.set_timeout(value);
+                        self.sound_timer.set_timeout(self.registers[value as usize]);
                     }
                     0x1E => { // 0xFx1E - ADD I, Vx
                         self.addr_reg += self.registers[value as usize] as u16;
@@ -478,5 +478,43 @@ mod tests {
         cpu.rng = Box::new(rand::rngs::mock::StepRng::new(0b00111100, 0));
         cpu.run_instr(0xC1F0);
         assert_eq!(0b00110000, cpu.registers[1]);
+    }
+
+    #[test]
+    fn instr_ld_vx_dt() {
+        let mut cpu = CPU::new();
+        cpu.delay_timer.set_timeout(100);
+        cpu.run_instr(0xF507);
+        assert!(cpu.delay_timer.get_timeout() > 98);
+        assert!(cpu.delay_timer.get_timeout() <= 100);
+        assert!(cpu.registers[5] > 98);
+        assert!(cpu.registers[5] <= 100);
+    }
+
+    #[test]
+    fn instr_ld_dt_vx() {
+        let mut cpu = CPU::new();
+        cpu.registers[5] = 100;
+        cpu.run_instr(0xF515);
+        assert!(cpu.delay_timer.get_timeout() > 98);
+        assert!(cpu.delay_timer.get_timeout() <= 100);
+    }
+
+    #[test]
+    fn instr_ld_st_vx() {
+        let mut cpu = CPU::new();
+        cpu.registers[5] = 100;
+        cpu.run_instr(0xF518);
+        assert!(cpu.sound_timer.get_timeout() > 98);
+        assert!(cpu.sound_timer.get_timeout() <= 100);
+    }
+
+    #[test]
+    fn instr_add_addr() {
+        let mut cpu = CPU::new();
+        cpu.addr_reg = 0x9821;
+        cpu.registers[5] = 0x56;
+        cpu.run_instr(0xF51E);
+        assert_eq!(0x9877, cpu.addr_reg);
     }
 }
