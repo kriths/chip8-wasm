@@ -1,2 +1,3 @@
 pub mod cpu;
-pub mod screen;
+mod screen;
+mod timer;
