@@ -5,6 +5,7 @@ use std::io::prelude::*;
 use rand::prelude::*;
 
 use crate::screen::Screen;
+use crate::timer::Timer;
 
 const TOTAL_MEMORY: usize = 4096;
 const PROGRAM_OFFSET: usize = 0x200;
@@ -26,6 +27,9 @@ pub struct CPU {
     rng: Box<dyn RngCore>,
 
     screen: Screen,
+
+    delay_timer: Timer,
+    sound_timer: Timer,
 }
 
 impl CPU {
@@ -39,6 +43,8 @@ impl CPU {
             addr_reg: 0x0000,
             rng: Box::new(rand::thread_rng()),
             screen: Screen::new(),
+            delay_timer: Timer::new(),
+            sound_timer: Timer::new(),
         }
     }
 
@@ -55,7 +61,7 @@ impl CPU {
         Ok(())
     }
 
-    fn iterate(&mut self) {
+    pub fn tick(&mut self) {
         let instr = u16::from_be_bytes([self.memory[self.ip as usize], self.memory[(self.ip + 1) as usize]]);
         self.run_instr(instr);
     }
@@ -194,21 +200,24 @@ impl CPU {
                 self.registers[0xF] = any_changes as u8;
             }
             0xF => {
+                let value = ((instr >> 8) & 0x0F) as u8;
                 match instr as u8 {
+                    0x07 => { // 0xFx07 - LD Vx, DT
+                        self.registers[value as usize];
+                    }
+                    0x15 => { // 0xFx15 - LD DT, Vx
+                        self.delay_timer.set_timeout(value);
+                    }
+                    0x18 => { // 0xFx18 - LD ST, Vx
+                        self.sound_timer.set_timeout(value);
+                    }
                     0x1E => { // 0xFx1E - ADD I, Vx
-                        let register = (instr >> 8) & 0x0F;
-                        self.addr_reg += self.registers[register as usize] as u16;
+                        self.addr_reg += self.registers[value as usize] as u16;
                     }
                     _ => panic!("Invalid instruction F")
                 }
             }
             _ => panic!("Invalid instruction")
-        }
-    }
-
-    pub fn run(&mut self) {
-        loop {
-            self.iterate();
         }
     }
 }
