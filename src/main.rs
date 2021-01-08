@@ -3,6 +3,7 @@ use std::{thread, time};
 use cpu::CPU;
 
 mod cpu;
+mod font;
 mod screen;
 mod timer;
 

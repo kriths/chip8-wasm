@@ -4,6 +4,7 @@ use std::io::prelude::*;
 
 use rand::prelude::*;
 
+use crate::font;
 use crate::screen::Screen;
 use crate::timer::Timer;
 
@@ -34,7 +35,7 @@ pub struct CPU {
 
 impl CPU {
     pub fn new() -> Self {
-        CPU {
+        let mut cpu = CPU {
             ip: PROGRAM_OFFSET as u16,
             sp: 0x00,
             stack: [0; STACK_SIZE],
@@ -45,7 +46,10 @@ impl CPU {
             screen: Screen::new(),
             delay_timer: Timer::new(),
             sound_timer: Timer::new(),
-        }
+        };
+
+        font::load_fonts(&mut cpu.memory);
+        cpu
     }
 
     pub fn load_from_file(&mut self, name: String) -> Result<(), io::Error> {
@@ -213,6 +217,10 @@ impl CPU {
                     }
                     0x1E => { // 0xFx1E - ADD I, Vx
                         self.addr_reg += self.registers[value as usize] as u16;
+                    }
+                    0x29 => { // 0xFx29 - LD F, Vx
+                        let letter = self.registers[value as usize] as u8;
+                        self.addr_reg = font::find_font_sprite(letter) as u16;
                     }
                     0x33 => { // 0xFx33 - LD B, Vx
                         let reg = self.registers[value as usize];
@@ -532,6 +540,15 @@ mod tests {
         cpu.registers[5] = 0x56;
         cpu.run_instr(0xF51E);
         assert_eq!(0x9877, cpu.addr_reg);
+    }
+
+    #[test]
+    fn instr_ld_font() {
+        let mut cpu = CPU::new();
+        cpu.registers[5] = 0x04;
+        cpu.run_instr(0xF529);
+        assert_eq!(20, cpu.addr_reg);
+        assert_eq!(0b10010000, cpu.memory[cpu.addr_reg as usize]);
     }
 
     #[test]
